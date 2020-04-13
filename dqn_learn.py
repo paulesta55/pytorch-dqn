@@ -105,9 +105,14 @@ def dqn_learing(
         # This means we are running on low-dimensional observations (e.g. RAM)
         input_arg = env.observation_space.shape[0]
     else:
-        img_h, img_w, img_c = env.observation_space.shape
+        
+        img_h, img_w, img_c = env.reset().shape
         input_arg = frame_history_len * img_c
+#     input_arg = frame_history_len * 
     num_actions = env.action_space.n
+    print("num actions = {}".format(num_actions))
+    print("image h,w,c = {0}, {1}, {2}".format(img_h,img_w,img_c))
+    print("input args = {}".format(input_arg))
 
     # Construct an epilson greedy policy with given exploration schedule
     def select_epilson_greedy_action(model, obs, t):
@@ -140,6 +145,7 @@ def dqn_learing(
     LOG_EVERY_N_STEPS = 10000
 
     for t in count():
+        print("step = {}".format(t))
         ### Check stopping criterion
         if stopping_criterion is not None and stopping_criterion(env):
             break
@@ -155,11 +161,12 @@ def dqn_learing(
 
         # Choose random action if not yet start learning
         if t > learning_starts:
-            action = select_epilson_greedy_action(Q, recent_observations, t)[0, 0]
+            action = select_epilson_greedy_action(Q, recent_observations, t)
         else:
             action = random.randrange(num_actions)
         # Advance one step
         obs, reward, done, _ = env.step(action)
+        print("observation shape during step = {}".format(obs.shape))
         # clip rewards between -1 and 1
         reward = max(-1.0, min(reward, 1.0))
         # Store other info in replay memory
@@ -186,6 +193,7 @@ def dqn_learing(
             act_batch = Variable(torch.from_numpy(act_batch).long())
             rew_batch = Variable(torch.from_numpy(rew_batch))
             next_obs_batch = Variable(torch.from_numpy(next_obs_batch).type(dtype) / 255.0)
+            print("next observation batch {}".format(next_obs_batch.size()))
             not_done_mask = Variable(torch.from_numpy(1 - done_mask)).type(dtype)
 
             if USE_CUDA:
@@ -194,23 +202,37 @@ def dqn_learing(
 
             # Compute current Q value, q_func takes only state and output value for every state-action pair
             # We choose Q based on action taken.
+            print("obs size {}".format(obs_batch.size()))
+            print("action batch {}".format(act_batch))
             current_Q_values = Q(obs_batch).gather(1, act_batch.unsqueeze(1))
+
+            
+            print("q values shape {}".format(current_Q_values))
             # Compute next Q value based on which action gives max Q values
             # Detach variable from the current graph since we don't want gradients for next Q to propagated
             next_max_q = target_Q(next_obs_batch).detach().max(1)[0]
+            print("next mask q shape {}".format(next_max_q.shape))
             next_Q_values = not_done_mask * next_max_q
+            print("rew batch shape {}".format(rew_batch))
+            print("not_done_mask shape {}".format(not_done_mask))
             # Compute the target of the current Q values
+            print("next q values {}".format(next_Q_values))
             target_Q_values = rew_batch + (gamma * next_Q_values)
+            print("target_Q_values {}".format(target_Q_values)  )
             # Compute Bellman error
-            bellman_error = target_Q_values - current_Q_values
+            bellman_error = target_Q_values.unsqueeze(1) - current_Q_values
+            print("bellman_error shape {}".format(bellman_error.shape))
             # clip the bellman error between [-1 , 1]
             clipped_bellman_error = bellman_error.clamp(-1, 1)
             # Note: clipped_bellman_delta * -1 will be right gradient
             d_error = clipped_bellman_error * -1.0
+            
+            
+            print("d error {}".format(d_error.data.unsqueeze(-1).shape))
             # Clear previous gradients before backward pass
             optimizer.zero_grad()
             # run backward pass
-            current_Q_values.backward(d_error.data.unsqueeze(1))
+            current_Q_values.backward(d_error.data)
 
             # Perfom the update
             optimizer.step()
