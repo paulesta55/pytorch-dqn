@@ -1,4 +1,4 @@
-# pytoch-dqn
+# pytorch-dqn
 
 This project is pytorch implementation of [Human-level control through deep reinforcement learning](http://www.nature.com/nature/journal/v518/n7540/full/nature14236.html) and I also plan to implement the following ones:
 
