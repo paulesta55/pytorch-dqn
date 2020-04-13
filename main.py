@@ -8,7 +8,7 @@ from utils.schedule import LinearSchedule
 
 BATCH_SIZE = 32
 GAMMA = 0.99
-REPLAY_BUFFER_SIZE = 1000000
+REPLAY_BUFFER_SIZE = 100000
 LEARNING_STARTS = 50000
 LEARNING_FREQ = 4
 FRAME_HISTORY_LEN = 4
@@ -48,13 +48,13 @@ def main(env, num_timesteps):
 
 if __name__ == '__main__':
     # Get Atari games.
-    benchmark = gym.benchmark_spec('Atari40M')
+#     benchmark = gym.benchmark_spec('Atari40M')
 
-    # Change the index to select a different game.
-    task = benchmark.tasks[3]
+#     # Change the index to select a different game.
+#     task = benchmark.tasks[3]
 
-    # Run training
+#     # Run training
     seed = 0 # Use a seed of zero (you may want to randomize the seed!)
-    env = get_env(task, seed)
+    env = get_env( seed)
 
-    main(env, task.max_timesteps)
+    main(env, 100000)
